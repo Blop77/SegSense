@@ -170,7 +170,7 @@ Each hackathon rule, and where SegSense meets it.
 | Working project | ✅ | All 8 examples fixed on real Nemotron; tests pass in CI |
 | Project description: what, why, how | ✅ | *What we built*, *Why we built it* and *How it works* above |
 | Working demo URL | ✅ | https://segsense.onrender.com (Render, from `render.yaml`) |
-| Demo video, public YouTube, ≤ 3 min | ✅ | https://www.youtube.com/watch?v=BUggEDYtdGw (2:17) |
+| Demo video, public YouTube, ≤ 3 min | ✅ | https://www.youtube.com/watch?v=NkiM_M_79AE (2:35) |
 | Public repository | ✅ | github.com/Blop77/SegSense is public |
 | Open source license shown at the top of the repo | ✅ | MIT, which GitHub detects |
 | README with setup and run instructions | ✅ | README: *Setup*, *Usage*, *Web demo*, *Deploy* |
@@ -186,7 +186,7 @@ Each hackathon rule, and where SegSense meets it.
 - [x] Repository is **public**, and the MIT license shows at the top of the repo page
 - [x] `main` contains the code
 - [x] Demo URL: https://segsense.onrender.com (hosted on Render with `SEGSENSE_EXAMPLES_ONLY=1`)
-- [x] Demo video: https://www.youtube.com/watch?v=BUggEDYtdGw (2:17)
+- [x] Demo video: https://www.youtube.com/watch?v=NkiM_M_79AE (2:35)
 - [ ] Track: Coding and Agentic Engineering
 - [ ] Description, NVIDIA and Nebius usage, and feedback pasted from this file
 - [ ] City chosen, if you attended a Builders & Brews event
