@@ -65,6 +65,14 @@ class AgentTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertIn("did not compile", model.calls[2][1][1]["content"])
 
+    def test_echoed_line_numbers_are_stripped(self):
+        numbered = "".join(f"{i:>2} | {line}\n" for i, line in enumerate(HEAP_FIXED.splitlines(), 1))
+        model = ScriptedModel([reply(numbered)])
+        result = make(model).fix(HEAP, "heap_overflow.c")
+        self.assertTrue(result.success)
+        self.assertEqual(len(result.attempts), 2)
+        self.assertEqual(result.final, HEAP_FIXED)
+
     def test_reply_without_code_is_retried(self):
         model = ScriptedModel(["I think it is line 8.", reply(HEAP_FIXED)])
         result = make(model).fix(HEAP, "heap_overflow.c")

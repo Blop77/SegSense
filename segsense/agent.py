@@ -29,6 +29,7 @@ Rules:
 - Keep the program's intended behaviour and output the same.
 - Free every allocation the program owns before it exits.
 - Use only standard C and the headers already available.
+- The source you receive has "N | " line numbers for reference only. Never copy them into your code.
 
 Answer in exactly this format:
 ROOT CAUSE: <one or two sentences>
@@ -248,7 +249,7 @@ class SegSense:
         )
         fields = dict(_FIELD.findall(reply.text))
         blocks = _CODE_BLOCK.findall(reply.text)
-        code = blocks[-1].rstrip() + "\n" if blocks else None
+        code = _strip_line_numbers(blocks[-1]).rstrip() + "\n" if blocks else None
         self.emit(
             "patch",
             {
@@ -261,6 +262,18 @@ class SegSense:
             },
         )
         return code, fields.get("ROOT CAUSE", "").strip(), fields.get("FIX", "").strip()
+
+
+_LINE_NO = re.compile(r"^\s*\d+ \| ?")
+
+
+def _strip_line_numbers(code: str) -> str:
+    """Models sometimes echo the 'N | ' prefixes from the prompt; remove them if most lines have one."""
+    lines = code.splitlines()
+    numbered = sum(1 for line in lines if _LINE_NO.match(line))
+    if numbered < max(1, len([l for l in lines if l.strip()]) * 0.6):
+        return code
+    return "\n".join(_LINE_NO.sub("", line, count=1) for line in lines)
 
 
 def _numbered(source: str, filename: str) -> str:

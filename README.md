@@ -53,8 +53,19 @@ clean. The model's claim alone is not enough.
   patch that changes the program's output, so a patch can't "fix" the program by gutting it.
 - **Sandboxed runs.** CPU-time and file-size limits plus a timeout; the Docker image runs as a non-root user.
 
-Bugs it handles out of the box (see [`examples/`](examples)): heap and stack buffer overflows,
-off-by-one errors, use-after-free, double free, memory leaks and signed integer overflow.
+## Results on real Nemotron
+
+All six bundled examples, run against Nebius Token Factory with Nemotron 3 Nano (triage) and
+Nemotron 3 Ultra (patch). Each was fixed on the first attempt and verified clean by the sanitizers.
+
+| Example | Bug | What Nemotron changed | Total time |
+|---|---|---|---|
+| `heap_overflow.c` | heap-buffer-overflow | `malloc(strlen(s))` → `malloc(strlen(s) + 1)` | 3 s |
+| `use_after_free.c` | heap-use-after-free | saves `n->next` before `free(n)` | 5 s |
+| `off_by_one.c` | stack-buffer-overflow | `i <= n` → `i < n` | 3 s |
+| `double_free.c` | double-free | gives the second owner its own copy | 6 s |
+| `memory_leak.c` | memory leak (Linux) | frees every word, the array and the temporary copy | 4 s |
+| `signed_overflow.c` | signed integer overflow (UB) | widens `int` to `long long` and fixes `printf` | 6 s |
 
 ## NVIDIA and Nebius usage
 
