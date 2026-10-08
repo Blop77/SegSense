@@ -5,6 +5,8 @@
 
 **▶ Live demo: [segsense.onrender.com](https://segsense.onrender.com)** · **🎬 Demo video: [youtu.be/BUggEDYtdGw](https://www.youtube.com/watch?v=BUggEDYtdGw)**
 
+[![Watch the SegSense demo video on YouTube (2:17)](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=BUggEDYtdGw)
+
 In the live demo, pick an example and press **Debug it** to watch Nemotron fix it live. It runs on a
 free instance, so the first visit after a quiet period can take about a minute to wake up.
 
