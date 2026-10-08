@@ -3,9 +3,9 @@
 [![tests](https://github.com/Blop77/SegSense/actions/workflows/tests.yml/badge.svg)](https://github.com/Blop77/SegSense/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**▶ Live demo: [segsense.onrender.com](https://segsense.onrender.com)** · **🎬 Demo video: [youtu.be/BUggEDYtdGw](https://www.youtube.com/watch?v=BUggEDYtdGw)**
+**▶ Live demo: [segsense.onrender.com](https://segsense.onrender.com)** · **🎬 Demo video: [youtu.be/NkiM_M_79AE](https://www.youtube.com/watch?v=NkiM_M_79AE)**
 
-[![Watch the SegSense demo video on YouTube (2:17)](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=BUggEDYtdGw)
+[![Watch the SegSense demo video on YouTube (2:35)](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=NkiM_M_79AE)
 
 In the live demo, pick an example and press **Debug it** to watch Nemotron fix it live. It runs on a
 free instance, so the first visit after a quiet period can take about a minute to wake up.
