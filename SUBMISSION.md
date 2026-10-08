@@ -164,7 +164,7 @@ Each hackathon rule, and where SegSense meets it.
 | Fits a track | ✅ | Coding and Agentic Engineering: the agent writes, runs and tests C code |
 | Working project | ✅ | All 8 examples fixed on real Nemotron; tests pass in CI |
 | Project description: what, why, how | ✅ | *What we built*, *Why we built it* and *How it works* above |
-| Working demo URL | ❌ **to do** | Host the Docker image, then paste the URL |
+| Working demo URL | ✅ | https://segsense.onrender.com (Render, from `render.yaml`) |
 | Demo video, public YouTube, ≤ 3 min | ❌ **to do** | Script above |
 | Public repository | ✅ | github.com/Blop77/SegSense is public |
 | Open source license shown at the top of the repo | ✅ | MIT, which GitHub detects |
@@ -180,8 +180,7 @@ Each hackathon rule, and where SegSense meets it.
 
 - [x] Repository is **public**, and the MIT license shows at the top of the repo page
 - [x] `main` contains the code
-- [ ] Demo URL: hosted web demo (Docker image on Nebius Serverless Endpoints or another host,
-      with `SEGSENSE_EXAMPLES_ONLY=1`)
+- [x] Demo URL: https://segsense.onrender.com (hosted on Render with `SEGSENSE_EXAMPLES_ONLY=1`)
 - [ ] Demo video: public YouTube link, 3 minutes or less
 - [ ] Track: Coding and Agentic Engineering
 - [ ] Description, NVIDIA and Nebius usage, and feedback pasted from this file
