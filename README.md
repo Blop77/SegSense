@@ -10,7 +10,7 @@ Factory** write a patch. It re-compiles and re-tests every patch and loops until
 $ segsense fix examples/heap_overflow.c
 [orig] AddressSanitizer: heap-buffer-overflow  duplicate at heap_overflow.c:8
 [segsense] triage: malloc(strlen(s)) leaves no room for the NUL; strcpy on line 8 writes past it.
-[try 1] asking nvidia/Llama-3_1-Nemotron-Ultra-253B-v1 for a patch ...
+[try 1] asking nvidia/Nemotron-3-Ultra-550b-a55b for a patch ...
 [try 1] clean run (exit 0)
 
 Fixed after 1 attempt(s).

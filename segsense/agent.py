@@ -214,7 +214,7 @@ class SegSense:
                     {"role": "user", "content": f"{_numbered(source, filename)}\n\nReport:\n{report.raw[:4000]}"},
                 ],
                 temperature=0.1,
-                max_tokens=400,
+                max_tokens=4096,
             )
         except Exception as exc:  # triage is a hint; never let it stop the fix
             self.emit("error", {"message": f"Triage failed: {exc}"})
@@ -244,7 +244,7 @@ class SegSense:
             self.config.patch_model,
             [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": "\n\n".join(parts)}],
             temperature=0.2,
-            max_tokens=8192,
+            max_tokens=16384,
         )
         fields = dict(_FIELD.findall(reply.text))
         blocks = _CODE_BLOCK.findall(reply.text)

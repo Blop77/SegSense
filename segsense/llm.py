@@ -12,11 +12,11 @@ from dataclasses import dataclass
 
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
 
-# Big reasoning model writes the patch; small fast model triages the crash.
+# Nemotron 3 Ultra (serious reasoning) writes the patch; Nemotron 3 Nano (fast) triages the crash.
 # Model IDs on Token Factory change over time: run `segsense models` to see what is live
 # and override with SEGSENSE_PATCH_MODEL / SEGSENSE_TRIAGE_MODEL.
-DEFAULT_PATCH_MODEL = "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1"
-DEFAULT_TRIAGE_MODEL = "nvidia/Nemotron-Nano-V2-12b"
+DEFAULT_PATCH_MODEL = "nvidia/Nemotron-3-Ultra-550b-a55b"
+DEFAULT_TRIAGE_MODEL = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
 
 
 def is_nvidia_model(model: str) -> bool:
@@ -54,9 +54,13 @@ class TokenFactory:
         start = time.monotonic()
         data = self._request("POST", "/chat/completions", body)
         try:
-            text = data["choices"][0]["message"]["content"] or ""
+            choice = data["choices"][0]
+            text = choice["message"].get("content") or ""
         except (KeyError, IndexError) as exc:
             raise LLMError(f"Unexpected response from Token Factory: {json.dumps(data)[:500]}") from exc
+        if not _THINK.sub("", text).strip() and choice.get("finish_reason") == "length":
+            # Reasoning models can spend the whole budget thinking and never reach the answer.
+            raise LLMError(f"{model} used all {max_tokens} tokens before answering; raise max_tokens.")
         usage = data.get("usage") or {}
         return ChatResult(
             text=_THINK.sub("", text).strip(),

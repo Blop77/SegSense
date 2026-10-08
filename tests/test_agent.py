@@ -91,8 +91,8 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(model.calls, [])
 
     def test_nvidia_model_check(self):
-        self.assertTrue(is_nvidia_model("nvidia/Llama-3_1-Nemotron-Ultra-253B-v1"))
-        self.assertTrue(is_nvidia_model("nvidia/Nemotron-Nano-V2-12b"))
+        self.assertTrue(is_nvidia_model("nvidia/Nemotron-3-Ultra-550b-a55b"))
+        self.assertTrue(is_nvidia_model("nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"))
         self.assertFalse(is_nvidia_model("meta-llama/Llama-3.3-70B-Instruct"))
 
 
