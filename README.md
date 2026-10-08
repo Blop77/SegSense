@@ -103,6 +103,31 @@ Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 Both models are NVIDIA open models served by Nebius Token Factory. Every AI call in SegSense goes to
 one of them, and the CLI warns if you configure a model that isn't from NVIDIA.
 
+### How SegSense uses the Tavily API
+
+SegSense makes a live call to the Tavily search API (`POST https://api.tavily.com/search`) every time it
+catches a crash. The result shapes the fix:
+
+1. The sanitizer finding is mapped to its MITRE CWE weakness and the SEI CERT C rule that prevents it,
+   for example heap-use-after-free maps to CWE-416 and MEM30-C ("Do not access freed memory").
+2. Two Tavily searches run in parallel: one restricted to `cwe.mitre.org`, one to `wiki.sei.cmu.edu`.
+   The official page from each is kept.
+3. The CWE and CERT rule are added to Nemotron 3 Ultra's patch prompt as background guidance.
+4. The links are shown next to the patch in the CLI and the web demo, so the user can read why the fix is right.
+
+| What | Where |
+|---|---|
+| The HTTP request to Tavily | `Tavily.search` in `segsense/references.py` |
+| The two parallel searches (CWE + CERT C) | `Tavily.lookup` in `segsense/references.py` |
+| Called on every crash, alongside Nano's triage | `SegSense._fix` / `SegSense._lookup` in `segsense/agent.py` |
+| Results added to Ultra's prompt | `SegSense._propose` in `segsense/agent.py` |
+
+It runs whenever `TAVILY_API_KEY` is set. Without a key, or if Tavily is unreachable, SegSense skips the
+search and still fixes the bug. On real runs, all 8 examples were matched to the correct CWE and CERT C
+rule. To see it happen, run `segsense fix examples/use_after_free.c` with both keys set and look for
+`CWE-416 · CERT MEM30-C references via Tavily`, or check the **references Tavily** badge on the
+[live demo](https://segsense.onrender.com).
+
 ### How Token Factory accelerated SegSense
 
 - **Fast enough to sit inside an edit-compile-run loop.** On our runs, Nemotron 3 Ultra (550B)
