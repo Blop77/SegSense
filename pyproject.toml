@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "segsense"
+version = "0.1.0"
+description = "Agentic debugger for C memory bugs, powered by NVIDIA Nemotron on Nebius Token Factory"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+segsense = "segsense.cli:main"
+
+[tool.setuptools]
+packages = ["segsense"]
