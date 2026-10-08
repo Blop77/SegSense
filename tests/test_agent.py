@@ -5,6 +5,7 @@ from pathlib import Path
 
 from segsense.agent import Config, SegSense
 from segsense.llm import ChatResult, is_nvidia_model
+from segsense.references import Lookup, Reference
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 HEAP = (EXAMPLES / "heap_overflow.c").read_text()
@@ -27,8 +28,27 @@ class ScriptedModel:
         return ChatResult(text=text, model=model)
 
 
-def make(model, **kw):
-    return SegSense(model, Config(patch_model="patch", triage_model="triage", **kw))
+def make(model, references=None, events=None, **kw):
+    on_event = (lambda kind, data: events.append((kind, data))) if events is not None else None
+    return SegSense(model, Config(patch_model="patch", triage_model="triage", **kw), on_event=on_event, references=references)
+
+
+class FakeReferences:
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.reports = []
+
+    def lookup(self, report):
+        self.reports.append(report)
+        if self.fail:
+            raise RuntimeError("Tavily is down")
+        return Lookup(
+            query="CWE-122 Heap-based Buffer Overflow in C",
+            cwe="CWE-122",
+            cert_rule="ARR30-C. Do not form or use out-of-bounds pointers or array subscripts",
+            references=[Reference("CWE-122: Heap-based Buffer Overflow", "https://cwe.mitre.org/data/definitions/122.html",
+                                  "Allocate enough space for the terminating null character.")],
+        )
 
 
 class AgentTests(unittest.TestCase):
@@ -99,6 +119,25 @@ class AgentTests(unittest.TestCase):
         result = make(model).fix(HEAP_FIXED, "heap_overflow.c")
         self.assertTrue(result.success)
         self.assertEqual(model.calls, [])
+
+    def test_reference_guidance_reaches_the_patch_prompt(self):
+        model, refs, events = ScriptedModel([reply(HEAP_FIXED)]), FakeReferences(), []
+        result = make(model, references=refs, events=events).fix(HEAP, "heap_overflow.c")
+
+        self.assertTrue(result.success)
+        self.assertEqual(refs.reports[0].kind, "heap-buffer-overflow")
+        prompt = model.calls[1][1][1]["content"]
+        self.assertIn("This is CWE-122; the SEI CERT C rule that prevents it is ARR30-C", prompt)
+        self.assertIn("terminating null character", prompt)
+        shown = dict(events)["references"]
+        self.assertEqual(shown["items"][0]["url"], "https://cwe.mitre.org/data/definitions/122.html")
+
+    def test_reference_failure_never_blocks_the_fix(self):
+        model, events = ScriptedModel([reply(HEAP_FIXED)]), []
+        result = make(model, references=FakeReferences(fail=True), events=events).fix(HEAP, "heap_overflow.c")
+        self.assertTrue(result.success)
+        self.assertIn("Reference lookup failed", dict(events)["error"]["message"])
+        self.assertNotIn("Reference guidance", model.calls[1][1][1]["content"])
 
     def test_nvidia_model_check(self):
         self.assertTrue(is_nvidia_model("nvidia/Nemotron-3-Ultra-550b-a55b"))

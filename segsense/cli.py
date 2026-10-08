@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .agent import Config, SegSense
 from .llm import DEFAULT_PATCH_MODEL, DEFAULT_TRIAGE_MODEL, LLMError, TokenFactory, is_nvidia_model
+from .references import from_env as references_from_env
 
 _TTY = sys.stdout.isatty()
 
@@ -37,6 +38,13 @@ def print_event(kind: str, data: dict) -> None:
         print(f"{tag} triaging with {data['model']} ...")
     elif kind == "triage":
         print(f"{tag} triage ({data['seconds']}s): {data['text']}")
+    elif kind == "references_start":
+        print(f"{tag} searching {data['source']} for reference guidance ...")
+    elif kind == "references":
+        label = " · ".join(filter(None, [data["cwe"], data["cert_rule"] and f"CERT {data['cert_rule'].split('.')[0]}"]))
+        print(f"{tag} {label + ' ' if label else ''}references via Tavily ({data['seconds']}s):")
+        for item in data["items"]:
+            print(f"        {item['title']}\n          {_c('36', item['url'])}")
     elif kind == "patch_start":
         print(f"{tag} asking {data['model']} for a patch ...")
     elif kind == "patch":
@@ -86,7 +94,7 @@ def cmd_fix(ns: argparse.Namespace) -> int:
         timeout=ns.timeout,
         cc=ns.cc,
     )
-    agent = SegSense(TokenFactory(), config, on_event=print_event)
+    agent = SegSense(TokenFactory(), config, on_event=print_event, references=None if ns.no_references else references_from_env())
     result = agent.fix(source, src.name)
 
     if result.success and result.final != result.original:
@@ -131,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     f.add_argument("--model", default=patch_default, help=f"patch model (default {patch_default})")
     f.add_argument("--triage-model", default=triage_default, help=f"fast triage model (default {triage_default})")
     f.add_argument("--no-triage", action="store_true", help="skip the fast triage call")
+    f.add_argument("--no-references", action="store_true", help="skip the Tavily reference search")
     f.add_argument("--cc", help="compiler to use (default: clang, then gcc)")
     f.add_argument("-o", "--output", help="where to write the fixed file (default: <name>.fixed.c)")
     f.add_argument("--in-place", action="store_true", help="overwrite the input file")

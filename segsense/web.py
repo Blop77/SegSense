@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .agent import Config, SegSense
 from .llm import TokenFactory
+from .references import from_env as references_from_env
 
 MAX_SOURCE_BYTES = 64 * 1024
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
@@ -35,7 +36,12 @@ def make_handler(patch_model: str, triage_model: str | None):
             elif self.path == "/api/examples":
                 self._send(200, "application/json", json.dumps(_examples()).encode())
             elif self.path == "/api/config":
-                config = {"examples_only": EXAMPLES_ONLY, "patch_model": patch_model, "triage_model": triage_model}
+                config = {
+                    "examples_only": EXAMPLES_ONLY,
+                    "patch_model": patch_model,
+                    "triage_model": triage_model,
+                    "references": "Tavily" if os.environ.get("TAVILY_API_KEY") else None,
+                }
                 self._send(200, "application/json", json.dumps(config).encode())
             elif self.path == "/healthz":
                 self._send(200, "text/plain", b"ok")
@@ -82,7 +88,8 @@ def make_handler(patch_model: str, triage_model: str | None):
                     args=str(body.get("args", "")).split(),
                     timeout=5.0,
                 )
-                result = SegSense(TokenFactory(), config, on_event=emit).fix(source, body.get("filename", "program.c"))
+                agent = SegSense(TokenFactory(), config, on_event=emit, references=references_from_env())
+                result = agent.fix(source, body.get("filename", "program.c"))
                 emit("done", {"success": result.success, "final": result.final, "diff": result.diff})
             except Exception as exc:
                 emit("error", {"message": str(exc)})
@@ -140,7 +147,8 @@ PAGE = r"""<!doctype html>
   #diff { font:13px/1.45 ui-monospace, Menlo, monospace; white-space:pre; overflow:auto; max-height:420px; margin:0; }
   .add { color:var(--green); } .del { color:var(--red); } .hunk { color:var(--blue); }
   .bad { color:var(--red); font-weight:700; } .ok { color:var(--green); font-weight:700; }
-  .ai { color:var(--amber); } .dim { color:var(--dim); }
+  .ai { color:var(--amber); } .dim { color:var(--dim); } .ref { color:var(--blue); }
+  #log a { color:var(--blue); }
   h2 { font-size:14px; margin:0 0 8px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
 </style>
 </head>
@@ -181,7 +189,7 @@ fetch('/api/examples').then(r => r.json()).then(ex => {
 });
 fetch('/api/config').then(r => r.json()).then(c => {
   const badge = (label, model) => model ? `<span class="badge">${label} <b>${esc(model)}</b></span>` : '';
-  $('badges').innerHTML = badge('triage', c.triage_model) + badge('patch', c.patch_model);
+  $('badges').innerHTML = badge('triage', c.triage_model) + badge('patch', c.patch_model) + badge('references', c.references);
   if (c.examples_only) { $('src').readOnly = true; $('src').title = 'Public demo: pick one of the bundled examples'; }
 });
 $('examples').onchange = e => { if (examples[e.target.value]) $('src').value = examples[e.target.value]; };
@@ -208,6 +216,9 @@ function render(ev) {
     case 'pass': line(t + `<span class="ok">clean run</span> (exit ${ev.exit_code})`); break;
     case 'triage_start': line(`<span class="ai">${esc(ev.model)} triaging...</span>`); break;
     case 'triage': line(`<span class="ai">triage (${ev.seconds}s):</span> ${esc(ev.text)}`); break;
+    case 'references_start': line(`<span class="ref">searching ${esc(ev.source)} for reference guidance...</span>`); break;
+    case 'references': line(`<span class="ref">${[ev.cwe, ev.cert_rule && 'CERT ' + ev.cert_rule.split('.')[0]].filter(Boolean).map(esc).join(' · ')} references via Tavily (${ev.seconds}s):</span>` +
+                       ev.items.map(r => `\n    <a href="${encodeURI(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title || r.url)}</a>`).join('')); break;
     case 'patch_start': line(t + `<span class="ai">${esc(ev.model)} writing a patch...</span>`); break;
     case 'patch': line(t + `<span class="ai">patch in ${ev.seconds}s</span>` +
                        (ev.root_cause ? `\n    root cause: ${esc(ev.root_cause)}` : '') +
