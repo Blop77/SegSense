@@ -22,8 +22,10 @@ SANITIZER_FLAGS = [
     "-fno-sanitize-recover=undefined",
 ]
 
-# LeakSanitizer only works on Linux. Apple clang's ASan aborts at startup if asked for it.
-LEAK_CHECKS = sys.platform.startswith("linux")
+# LeakSanitizer only works on Linux. Apple clang's ASan aborts at startup if asked for it, and
+# LSan also dies inside some containers (it needs ptrace), so the compiler probe can turn it off.
+# SEGSENSE_LEAK_CHECKS=0 or 1 overrides the default.
+LEAK_CHECKS = os.environ.get("SEGSENSE_LEAK_CHECKS", "1" if sys.platform.startswith("linux") else "0") == "1"
 
 RUN_ENV = {
     "ASAN_OPTIONS": f"detect_leaks={int(LEAK_CHECKS)}:abort_on_error=0:symbolize=1:color=never",
@@ -113,10 +115,22 @@ def _can_sanitize(cc: str) -> bool:
         src.write_text("int main(void) { return 0; }\n")
         binary = Path(tmp) / "probe"
         try:
+            if not compile_source(src, binary, cc).ok:
+                return False
             # Linking is not enough: the runtime must also start cleanly with our options.
-            return compile_source(src, binary, cc).ok and run_binary(binary, timeout=30).exit_code == 0
+            run = run_binary(binary, timeout=30)
+            if run.exit_code != 0 and LEAK_CHECKS and "LeakSanitizer has encountered a fatal error" in run.stderr:
+                _set_leak_checks(False)
+                run = run_binary(binary, timeout=30)
+            return run.exit_code == 0
         except (OSError, subprocess.TimeoutExpired):
             return False
+
+
+def _set_leak_checks(enabled: bool) -> None:
+    global LEAK_CHECKS
+    LEAK_CHECKS = enabled
+    RUN_ENV["ASAN_OPTIONS"] = re.sub(r"detect_leaks=\d", f"detect_leaks={int(enabled)}", RUN_ENV["ASAN_OPTIONS"])
 
 
 def compile_source(src: Path, out: Path, cc: str, extra_flags: list[str] | None = None) -> BuildResult:

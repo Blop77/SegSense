@@ -157,18 +157,23 @@ Choose an example or paste your own C code, then press **Debug it**. The agent l
 
 ### Deploy
 
+**One click:** [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Blop77/SegSense)
+
+Render builds the `Dockerfile`, asks for your `NEBIUS_API_KEY`, and serves the demo with
+`SEGSENSE_EXAMPLES_ONLY=1` (see `render.yaml`). Free instances sleep when idle, so the first visit
+after a while takes about a minute to wake up.
+
+**Any container host** (including Nebius Serverless Endpoints):
+
 ```bash
 docker build -t segsense .
-docker run -p 8080:8080 -e NEBIUS_API_KEY=$NEBIUS_API_KEY segsense
-```
-
-The same image can run on Nebius Serverless Endpoints or any container host. The demo compiles and
-runs code that visitors submit, so keep it in an isolated container like this one. On a public URL,
-also set `SEGSENSE_EXAMPLES_ONLY=1`; visitors can then run only the bundled examples, not their own code:
-
-```bash
 docker run -p 8080:8080 -e NEBIUS_API_KEY=$NEBIUS_API_KEY -e SEGSENSE_EXAMPLES_ONLY=1 segsense
 ```
+
+The demo compiles and runs C code, so keep it in an isolated container like this one.
+`SEGSENSE_EXAMPLES_ONLY=1` limits visitors to the bundled examples. Some container platforms block
+the `ptrace` call that LeakSanitizer needs; SegSense detects this at startup and turns leak checks off,
+and every other check keeps working.
 
 ## Tests
 

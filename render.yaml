@@ -1,0 +1,13 @@
+# One-click hosting for the SegSense web demo on Render (https://render.com).
+# The "Deploy to Render" button in the README reads this file.
+services:
+  - type: web
+    name: segsense
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false          # Render asks for your Token Factory key during setup; it is never stored in the repo
+      - key: SEGSENSE_EXAMPLES_ONLY
+        value: "1"           # public demo: visitors can run the bundled examples, not arbitrary C
