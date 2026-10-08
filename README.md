@@ -3,9 +3,10 @@
 [![tests](https://github.com/Blop77/SegSense/actions/workflows/tests.yml/badge.svg)](https://github.com/Blop77/SegSense/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**▶ Live demo: [segsense.onrender.com](https://segsense.onrender.com)**: pick an example and press
-**Debug it** to watch Nemotron fix it live. It runs on a free instance, so the first visit after a quiet
-period can take about a minute to wake up.
+**▶ Live demo: [segsense.onrender.com](https://segsense.onrender.com)** · **🎬 Demo video: [youtu.be/BUggEDYtdGw](https://www.youtube.com/watch?v=BUggEDYtdGw)**
+
+In the live demo, pick an example and press **Debug it** to watch Nemotron fix it live. It runs on a
+free instance, so the first visit after a quiet period can take about a minute to wake up.
 
 **Agentic debugger for C memory bugs.** SegSense compiles your C program with AddressSanitizer and
 UndefinedBehaviorSanitizer, runs it, catches the crash, and has **NVIDIA Nemotron on Nebius Token
