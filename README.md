@@ -81,13 +81,28 @@ Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 
 | What | Where |
 |---|---|
-| **NVIDIA Nemotron Ultra** (patch model): root-cause reasoning and code repair | `segsense/agent.py`, `SegSense._propose` |
-| **NVIDIA Nemotron Nano** (triage model): fast crash summary | `segsense/agent.py`, `SegSense._triage` |
+| **NVIDIA Nemotron 3 Ultra** (`nvidia/Nemotron-3-Ultra-550b-a55b`), the patch model: root-cause reasoning and code repair | `segsense/agent.py`, `SegSense._propose` |
+| **NVIDIA Nemotron 3 Nano** (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`), the triage model: fast crash summary | `segsense/agent.py`, `SegSense._triage` |
 | **Nebius Token Factory**: OpenAI-compatible inference for both models | `segsense/llm.py` |
-| **Nebius Serverless Endpoints** (optional): host the web demo from the `Dockerfile` | see *Deploy* |
+| **Nebius Serverless Endpoints**: target for hosting the web demo from the `Dockerfile` (not yet deployed) | see *Deploy* |
 
-Every AI call in SegSense goes to an NVIDIA model. The CLI warns if you configure a model that
-isn't from NVIDIA.
+Both models are NVIDIA open models served by Nebius Token Factory. Every AI call in SegSense goes to
+one of them, and the CLI warns if you configure a model that isn't from NVIDIA.
+
+### How Token Factory accelerated SegSense
+
+- **Fast enough to sit inside an edit-compile-run loop.** On our runs, Nemotron 3 Ultra (550B)
+  returned a complete patched file in 2–4 s and Nano triaged a crash in 1–4 s. Each full fix took
+  3–7 s, so SegSense can afford to re-test every patch and retry instead of trusting one answer.
+- **One endpoint, two model sizes.** Nano and Ultra sit behind the same API, so the "cheap model
+  triages, strong model patches" split needed no extra infrastructure. Nano's triage note goes into
+  Ultra's prompt.
+- **No SDK lock-in.** Because the API is OpenAI-compatible, the whole client is about 100 lines of
+  the Python standard library (`segsense/llm.py`), with nothing to install.
+- **A live model catalogue.** `segsense models` reads Token Factory's `/models` endpoint. That is
+  how we found and switched to the Nemotron 3 family during development.
+- **Cheap per fix.** Each fix takes two calls and about 4–5k tokens, and the usage line printed after
+  every run shows that.
 
 ## Setup
 
