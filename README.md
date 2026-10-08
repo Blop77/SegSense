@@ -118,6 +118,78 @@ one of them, and the CLI warns if you configure a model that isn't from NVIDIA.
 - **Cheap per fix.** Each fix takes two calls and about 4–5k tokens, and the usage line printed after
   every run shows that.
 
+## Verify it yourself
+
+Every AI call in SegSense goes to NVIDIA Nemotron on Nebius Token Factory. Here's how to check that
+in about two minutes, from the code down to a live run.
+
+**1. Find every network call in the code.** SegSense uses only the Python standard library and makes
+outbound requests to exactly two places:
+
+```bash
+grep -rn --include=*.py "https://api" segsense/
+```
+```
+segsense/llm.py:13:DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
+segsense/references.py:16:TAVILY_URL = "https://api.tavily.com/search"
+```
+
+Nebius Token Factory serves the models. Tavily is a web search API that returns links, not an AI model.
+
+**2. Check which models are called.**
+
+```bash
+grep -rn --include=*.py "DEFAULT_.*_MODEL =" segsense/
+```
+```
+segsense/llm.py:18:DEFAULT_PATCH_MODEL = "nvidia/Nemotron-3-Ultra-550b-a55b"
+segsense/llm.py:19:DEFAULT_TRIAGE_MODEL = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+```
+
+Both model calls go through one method, `SegSense._chat` in `segsense/agent.py`: once in `_triage`
+(Nano) and once per attempt in `_propose` (Ultra). The CLI warns if anyone configures a model that
+isn't from NVIDIA (`is_nvidia_model` in `segsense/llm.py`).
+
+**3. Confirm no other AI provider is referenced.**
+
+```bash
+grep -rniE --include=*.py "api\.openai\.com|anthropic|generativelanguage|api\.mistral|api\.cohere|api\.groq" segsense/ \
+  || echo "no other AI providers"
+```
+```
+no other AI providers
+```
+
+**4. Ask Token Factory which NVIDIA models your key can use** (needs a free `NEBIUS_API_KEY`):
+
+```bash
+python3 -m segsense models
+```
+
+**5. Watch Nemotron fix a bug.** Every run names the model doing each step and ends with the call and
+token counts that Token Factory itself reports (output trimmed; timings and token counts vary per run):
+
+```bash
+python3 -m segsense fix examples/use_after_free.c
+```
+```
+[segsense] triaging with nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B ...
+[try 1] asking nvidia/Nemotron-3-Ultra-550b-a55b for a patch ...
+[try 1] clean run (exit 0)
+Fixed after 1 attempt(s).
+[segsense] 2 Nemotron call(s) on Token Factory · 4,929 tokens · 5.3s model time
+```
+
+**6. Or skip the setup and use the [live demo](https://segsense.onrender.com).** The badges at the top
+name both NVIDIA models, and the agent log streams each Nemotron step as it happens. It runs on a free
+instance, so the first load can take about a minute.
+
+**7. Run the tests** (no API keys needed; a scripted stand-in replaces the models):
+
+```bash
+python3 -m unittest discover -s tests -t .
+```
+
 ## Setup
 
 Requirements: Python 3.10+, and gcc or clang with the sanitizer runtime (`libasan`). Linux or
