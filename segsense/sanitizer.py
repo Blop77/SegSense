@@ -30,7 +30,9 @@ LEAK_CHECKS = os.environ.get("SEGSENSE_LEAK_CHECKS", "1" if sys.platform.startsw
 RUN_ENV = {
     "ASAN_OPTIONS": f"detect_leaks={int(LEAK_CHECKS)}:abort_on_error=0:symbolize=1:color=never",
     "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1:color=never",
-    "LSAN_OPTIONS": "color=never",
+    # Leaks are checked after main returns, when stack and register contents are dead. Scanning them
+    # anyway lets a stale copy of a leaked pointer hide the leak (with clang + UBSan, every time).
+    "LSAN_OPTIONS": "use_stacks=0:use_registers=0:color=never",
 }
 
 _ASAN_ERROR = re.compile(r"ERROR: (AddressSanitizer|LeakSanitizer): (?:attempting )?(detected memory leaks|[\w-]+)")

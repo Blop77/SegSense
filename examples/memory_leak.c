@@ -12,14 +12,10 @@ char **split(const char *line, int *count) {
     return words;
 }
 
-static void print_words(const char *line) {
+int main(void) {
     int n;
-    char **words = split(line, &n);
+    char **words = split("ride the bike then play football", &n);
     for (int i = 0; i < n; i++)
         printf("%d: %s\n", i, words[i]);
-}
-
-int main(void) {
-    print_words("ride the bike then play football");
     return 0;
 }
