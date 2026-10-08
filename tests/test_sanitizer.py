@@ -1,8 +1,9 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from segsense.sanitizer import compile_source, find_compiler, parse_report, run_binary
+from segsense.sanitizer import LEAK_CHECKS, compile_source, find_compiler, parse_report, run_binary
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
@@ -30,6 +31,8 @@ class SanitizerTests(unittest.TestCase):
 
     def test_examples_are_caught_at_the_right_line(self):
         for name, (kind, func, line) in EXPECTED.items():
+            if name == "memory_leak.c" and not LEAK_CHECKS:
+                continue  # LeakSanitizer is Linux-only
             with self.subTest(name):
                 result = self._run(EXAMPLES / name)
                 self.assertFalse(result.clean)
@@ -44,6 +47,16 @@ class SanitizerTests(unittest.TestCase):
             result = self._run(src)
         self.assertTrue(result.clean)
         self.assertEqual(result.stdout, "ok\n")
+
+    def test_sanitizer_runtime_failure_is_not_clean(self):
+        # What Apple clang's ASan does when asked for leak detection.
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / "fake"
+            script.write_text("#!/bin/sh\necho '==42==AddressSanitizer: detect_leaks is not supported on this platform.' >&2\nexit 1\n")
+            script.chmod(0o755)
+            result = run_binary(script)
+        self.assertFalse(result.clean)
+        self.assertIn("detect_leaks is not supported", result.report.summary)
 
     def test_report_drops_shadow_bytes(self):
         stderr = (

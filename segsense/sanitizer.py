@@ -8,6 +8,7 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,14 +22,18 @@ SANITIZER_FLAGS = [
     "-fno-sanitize-recover=undefined",
 ]
 
+# LeakSanitizer only works on Linux. Apple clang's ASan aborts at startup if asked for it.
+LEAK_CHECKS = sys.platform.startswith("linux")
+
 RUN_ENV = {
-    "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=0:symbolize=1:color=never",
+    "ASAN_OPTIONS": f"detect_leaks={int(LEAK_CHECKS)}:abort_on_error=0:symbolize=1:color=never",
     "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1:color=never",
     "LSAN_OPTIONS": "color=never",
 }
 
 _ASAN_ERROR = re.compile(r"ERROR: (AddressSanitizer|LeakSanitizer): (?:attempting )?(detected memory leaks|[\w-]+)")
 _UBSAN_ERROR = re.compile(r"^(?P<loc>\S+?:\d+:\d+): runtime error: (?P<msg>.+)$", re.M)
+_RUNTIME_MSG = re.compile(r"^==\d+==.*Sanitizer.*$", re.M)
 _SUMMARY = re.compile(r"^SUMMARY: (.+)$", re.M)
 _FRAME = re.compile(r"#(\d+) 0x[0-9a-f]+ in (\S+) (\S+?):(\d+)(?::(\d+))?")
 
@@ -106,8 +111,10 @@ def _can_sanitize(cc: str) -> bool:
     with tempfile.TemporaryDirectory(prefix="segsense-probe-") as tmp:
         src = Path(tmp) / "probe.c"
         src.write_text("int main(void) { return 0; }\n")
+        binary = Path(tmp) / "probe"
         try:
-            return compile_source(src, Path(tmp) / "probe", cc).ok
+            # Linking is not enough: the runtime must also start cleanly with our options.
+            return compile_source(src, binary, cc).ok and run_binary(binary, timeout=30).exit_code == 0
         except (OSError, subprocess.TimeoutExpired):
             return False
 
@@ -156,6 +163,10 @@ def run_binary(
         sig = -proc.returncode
         name = signal.Signals(sig).name if sig in signal.Signals._value2member_map_ else f"signal {sig}"
         report = SanitizerReport("Signal", name, f"process killed by {name}", raw=proc.stderr)
+    if report is None and proc.returncode != 0 and _RUNTIME_MSG.search(proc.stderr):
+        # The sanitizer runtime itself complained (bad option, unsupported platform). Never call that clean.
+        msg = _RUNTIME_MSG.search(proc.stderr).group(0).strip()
+        report = SanitizerReport("SanitizerRuntime", "sanitizer runtime error", msg, raw=_trim(proc.stderr))
     return RunResult(proc.returncode, proc.stdout, proc.stderr, False, report)
 
 

@@ -76,11 +76,13 @@ macOS. SegSense has no Python dependencies.
 ```bash
 git clone https://github.com/Blop77/SegSense.git
 cd SegSense
-pip install -e .                       # or run it without installing: python -m segsense ...
-
-export NEBIUS_API_KEY=...              # from https://tokenfactory.nebius.com
-segsense models                        # lists the NVIDIA models your key can use
+pip install -e .
+export NEBIUS_API_KEY=...
+segsense models
 ```
+
+Get the key from https://tokenfactory.nebius.com. `segsense models` lists the NVIDIA models your key
+can use. You can also skip installing and run `python3 -m segsense ...` from the repo folder.
 
 The default model IDs live in `segsense/llm.py`. Token Factory's catalogue changes, so if
 `segsense models` shows different IDs, set them explicitly:
@@ -93,20 +95,26 @@ export SEGSENSE_TRIAGE_MODEL=nvidia/<nano-model-id>
 ## Usage
 
 ```bash
-segsense fix examples/use_after_free.c                     # writes examples/use_after_free.fixed.c
-segsense fix prog.c --args "input.txt 3" --stdin in.txt    # run the program with args and input
-segsense fix prog.c --expect-stdout expected.txt           # the patch must keep the output identical
+segsense fix examples/use_after_free.c
+segsense fix prog.c --args "input.txt 3" --stdin in.txt
+segsense fix prog.c --expect-stdout expected.txt
 segsense fix prog.c --in-place --max-attempts 6
-segsense fix prog.c --no-triage                            # use the patch model only
+segsense fix prog.c --no-triage
 ```
+
+In order: fix an example (writes `examples/use_after_free.fixed.c`); run the program with arguments
+and input; require the patch to keep the output identical; overwrite the file and allow more tries;
+use only the patch model.
 
 The exit code is `0` when the program ends up clean, so SegSense works in CI.
 
 ### Web demo
 
 ```bash
-segsense serve --port 8080      # open http://localhost:8080
+segsense serve --port 8080
 ```
+
+Then open http://localhost:8080.
 
 Choose an example or paste your own C code, then press **Debug it**. The agent log streams each step
 (build, crash, Nemotron triage, patch, re-test) and the patch is shown as a coloured diff.
@@ -147,6 +155,8 @@ tests/           unit and end-to-end tests
 
 - Works on one `.c` file at a time. Multi-file projects with a Makefile are next.
 - Uses gcc's and clang's sanitizers, so it doesn't run on Windows/MSVC.
+- Memory-leak detection (LeakSanitizer) is Linux-only. On macOS SegSense turns it off automatically,
+  but still catches overflows, use-after-free, double free and undefined behaviour.
 - Planned: Valgrind as a second opinion, and data races via ThreadSanitizer.
 
 ## License
