@@ -49,6 +49,8 @@ def print_event(kind: str, data: dict) -> None:
         print(f"{tag} {_c('33', data['message'])}")
     elif kind == "fixed":
         print(f"\n{_c('32;1', 'Fixed')} after {data['attempt']} attempt(s).\n")
+    elif kind == "summary":
+        print(_c("2", f"[segsense] {data['calls']} Nemotron call(s) on Token Factory · {data['tokens']:,} tokens · {data['model_seconds']}s model time"))
     elif kind == "gave_up":
         print(f"\n{_c('31;1', 'Gave up')} after {data['attempts']} attempts.")
 

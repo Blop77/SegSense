@@ -40,6 +40,8 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(len(result.attempts), 2)  # original run + one patch
         self.assertIn("+    char *copy = malloc(strlen(s) + 1);", result.diff)
         self.assertIn("allocate strlen + 1", result.explanation)
+        self.assertEqual(result.usage["calls"], 2)
+        self.assertEqual(result.usage["models"], ["patch", "triage"])
 
         # Triage goes to the fast model; the patch prompt carries the report and the triage note.
         self.assertEqual([c[0] for c in model.calls], ["triage", "patch"])

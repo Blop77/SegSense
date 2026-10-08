@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -14,6 +15,8 @@ MAX_SOURCE_BYTES = 64 * 1024
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
 # Each fix compiles and runs untrusted code; keep concurrency low on a shared demo box.
 _slots = threading.BoundedSemaphore(2)
+# On a public URL, set this so visitors can only run the bundled examples, not arbitrary C.
+EXAMPLES_ONLY = os.environ.get("SEGSENSE_EXAMPLES_ONLY", "").lower() in ("1", "true", "yes")
 
 
 def _examples() -> dict[str, str]:
@@ -31,6 +34,9 @@ def make_handler(patch_model: str, triage_model: str | None):
                 self._send(200, "text/html; charset=utf-8", PAGE.encode())
             elif self.path == "/api/examples":
                 self._send(200, "application/json", json.dumps(_examples()).encode())
+            elif self.path == "/api/config":
+                config = {"examples_only": EXAMPLES_ONLY, "patch_model": patch_model, "triage_model": triage_model}
+                self._send(200, "application/json", json.dumps(config).encode())
             elif self.path == "/healthz":
                 self._send(200, "text/plain", b"ok")
             else:
@@ -49,6 +55,9 @@ def make_handler(patch_model: str, triage_model: str | None):
                 source = str(body["source"])
             except (ValueError, KeyError):
                 self._send(400, "text/plain", b"expected JSON with a 'source' field")
+                return
+            if EXAMPLES_ONLY and source not in _examples().values():
+                self._send(403, "text/plain", b"this public demo only runs the bundled examples; run SegSense locally for your own code")
                 return
             if not _slots.acquire(blocking=False):
                 self._send(429, "text/plain", b"busy: try again in a moment")
@@ -114,6 +123,9 @@ PAGE = r"""<!doctype html>
   header { padding:20px 16px 8px; max-width:1200px; margin:auto; }
   h1 { margin:0; font-size:26px; } h1 span { color:var(--green); }
   header p { margin:4px 0 0; color:var(--dim); }
+  .badges { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .badge { font:12px ui-monospace, Menlo, monospace; border:1px solid var(--line); border-radius:999px; padding:3px 10px; color:var(--dim); }
+  .badge b { color:var(--green); font-weight:600; }
   main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; max-width:1200px; margin:auto; }
   @media (max-width: 860px) { main { grid-template-columns:1fr; } }
   .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; min-width:0; }
@@ -137,6 +149,7 @@ PAGE = r"""<!doctype html>
   <h1>Seg<span>Sense</span></h1>
   <p>Paste C code with a memory bug. SegSense compiles it with AddressSanitizer + UBSan, catches the crash,
      and has NVIDIA Nemotron on Nebius Token Factory patch it until it runs clean.</p>
+  <div class="badges" id="badges"></div>
 </header>
 <main>
   <section class="panel">
@@ -165,6 +178,11 @@ fetch('/api/examples').then(r => r.json()).then(ex => {
   for (const name of Object.keys(ex)) $('examples').add(new Option(name, name));
   const first = Object.keys(ex)[0];
   if (first) { $('examples').value = first; $('src').value = ex[first]; }
+});
+fetch('/api/config').then(r => r.json()).then(c => {
+  const badge = (label, model) => model ? `<span class="badge">${label} <b>${esc(model)}</b></span>` : '';
+  $('badges').innerHTML = badge('triage', c.triage_model) + badge('patch', c.patch_model);
+  if (c.examples_only) { $('src').readOnly = true; $('src').title = 'Public demo: pick one of the bundled examples'; }
 });
 $('examples').onchange = e => { if (examples[e.target.value]) $('src').value = examples[e.target.value]; };
 
@@ -196,6 +214,7 @@ function render(ev) {
                        (ev.fix ? `\n    fix: ${esc(ev.fix)}` : '')); break;
     case 'clean': line(`<span class="ok">${esc(ev.message)}</span>`); break;
     case 'fixed': line(`<span class="ok">Fixed after ${ev.attempt} attempt(s).</span>`); showDiff(ev.diff); break;
+    case 'summary': line(`<span class="dim">${ev.calls} Nemotron call(s) on Nebius Token Factory · ${ev.tokens.toLocaleString()} tokens · ${ev.model_seconds}s model time</span>`); break;
     case 'gave_up': line(`<span class="bad">Gave up after ${ev.attempts} attempts.</span>`); break;
     case 'error': line(`<span class="bad">${esc(ev.message)}</span>`); break;
   }

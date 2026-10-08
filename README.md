@@ -1,5 +1,8 @@
 # SegSense
 
+[![tests](https://github.com/Blop77/SegSense/actions/workflows/tests.yml/badge.svg)](https://github.com/Blop77/SegSense/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 **Agentic debugger for C memory bugs.** SegSense compiles your C program with AddressSanitizer and
 UndefinedBehaviorSanitizer, runs it, catches the crash, and has **NVIDIA Nemotron on Nebius Token
 Factory** write a patch. It re-compiles and re-tests every patch and loops until the program runs clean.
@@ -17,6 +20,10 @@ Fixed after 1 attempt(s).
 -    char *copy = malloc(strlen(s));
 +    char *copy = malloc(strlen(s) + 1);
 ```
+
+![SegSense web demo fixing a use-after-free across realloc with Nemotron 3 Nano and Ultra](docs/demo.png)
+
+Hackathon submission material (Devpost text, demo video script, feedback) is in [SUBMISSION.md](SUBMISSION.md).
 
 ## Why
 
@@ -57,6 +64,7 @@ clean. The model's claim alone is not enough.
 
 All six bundled examples, run against Nebius Token Factory with Nemotron 3 Nano (triage) and
 Nemotron 3 Ultra (patch). Each was fixed on the first attempt and verified clean by the sanitizers.
+Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 
 | Example | Bug | What Nemotron changed | Total time |
 |---|---|---|---|
@@ -66,6 +74,8 @@ Nemotron 3 Ultra (patch). Each was fixed on the first attempt and verified clean
 | `double_free.c` | double-free | gives the second owner its own copy | 6 s |
 | `memory_leak.c` | memory leak (Linux) | frees every word, the array and the temporary copy | 4 s |
 | `signed_overflow.c` | signed integer overflow (UB) | widens `int` to `long long` and fixes `printf` | 6 s |
+| `string_builder.c` | heap-use-after-free across `realloc` | computes the write pointer after `realloc` moves the buffer | 7 s |
+| `matrix_transpose.c` | heap-buffer-overflow (wrong stride) | `t[c * cols + r]` → `t[c * rows + r]`; output checked with `--expect-stdout` | 6 s |
 
 ## NVIDIA and Nebius usage
 
@@ -138,7 +148,12 @@ docker run -p 8080:8080 -e NEBIUS_API_KEY=$NEBIUS_API_KEY segsense
 ```
 
 The same image can run on Nebius Serverless Endpoints or any container host. The demo compiles and
-runs code that visitors submit, so keep it in an isolated container like this one.
+runs code that visitors submit, so keep it in an isolated container like this one. On a public URL,
+also set `SEGSENSE_EXAMPLES_ONLY=1`; visitors can then run only the bundled examples, not their own code:
+
+```bash
+docker run -p 8080:8080 -e NEBIUS_API_KEY=$NEBIUS_API_KEY -e SEGSENSE_EXAMPLES_ONLY=1 segsense
+```
 
 ## Tests
 

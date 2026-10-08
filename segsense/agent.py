@@ -84,6 +84,17 @@ class FixResult:
     attempts: list[Attempt] = field(default_factory=list)
     initial_report: SanitizerReport | None = None
     triage: str = ""
+    calls: list[ChatResult] = field(default_factory=list)
+
+    @property
+    def usage(self) -> dict:
+        """Totals across every Nemotron call this fix made."""
+        return {
+            "calls": len(self.calls),
+            "tokens": sum(c.prompt_tokens + c.completion_tokens for c in self.calls),
+            "model_seconds": round(sum(c.seconds for c in self.calls), 1),
+            "models": sorted({c.model for c in self.calls}),
+        }
 
     @property
     def diff(self) -> str:
@@ -125,7 +136,19 @@ class SegSense:
         self.cc = find_compiler(config.cc)
 
     def fix(self, source: str, filename: str = "program.c") -> FixResult:
-        filename = Path(filename).name or "program.c"
+        self._calls: list[ChatResult] = []
+        result = self._fix(source, Path(filename).name or "program.c")
+        result.calls = self._calls
+        if result.calls:
+            self.emit("summary", {"success": result.success, **result.usage})
+        return result
+
+    def _chat(self, model: str, messages: list[dict], **kw) -> ChatResult:
+        reply = self.llm.chat(model, messages, **kw)
+        self._calls.append(reply)
+        return reply
+
+    def _fix(self, source: str, filename: str) -> FixResult:
         with tempfile.TemporaryDirectory(prefix="segsense-") as tmp:
             work = Path(tmp)
             self.emit("start", {"file": filename, "compiler": self.cc, "patch_model": self.config.patch_model})
@@ -208,7 +231,7 @@ class SegSense:
     def _triage(self, source: str, filename: str, report: SanitizerReport) -> str:
         self.emit("triage_start", {"model": self.config.triage_model})
         try:
-            reply = self.llm.chat(
+            reply = self._chat(
                 self.config.triage_model,
                 [
                     {"role": "system", "content": TRIAGE_PROMPT},
@@ -241,7 +264,7 @@ class SegSense:
             parts.append(note)
 
         self.emit("patch_start", {"attempt": n, "model": self.config.patch_model})
-        reply = self.llm.chat(
+        reply = self._chat(
             self.config.patch_model,
             [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": "\n\n".join(parts)}],
             temperature=0.2,
