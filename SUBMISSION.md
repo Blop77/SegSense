@@ -53,10 +53,13 @@ reasoning, and the loop doesn't stop until the sanitizer agrees.
 
 ```
 prog.c → build (-fsanitize=address,undefined) → run → parse report
-       → Nemotron 3 Nano triage → Nemotron 3 Ultra patch
+       → Nemotron 3 Nano triage → Tavily CWE / CERT C search → Nemotron 3 Ultra patch
        → rebuild + rerun → clean? done : feed failure back → patch again
 ```
 
+- Tavily search maps each bug to its MITRE CWE weakness and fetches guidance from trusted sources only
+  (MITRE CWE, SEI CERT C, OWASP, Clang docs). The excerpts go into Ultra's prompt and the links are shown
+  with the patch. It is optional and never blocks a fix.
 - Pure Python standard library with no dependencies. It talks to Token Factory's OpenAI-compatible API.
 - The prompts are grounded: line-numbered source, a sanitizer report with the noise removed, and
   only the stack frames that point into the user's file.
@@ -78,6 +81,8 @@ Each fix took two Nemotron calls, about 4–5k tokens, and 3–7 seconds end to 
 - **NVIDIA Nemotron 3 Nano** (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`): fast first-pass triage.
 - **Nebius Token Factory**: serves both models through one OpenAI-compatible endpoint.
   `segsense models` lists the NVIDIA models available to your key.
+- **Tavily search API**: a runtime call on every crash finds CWE and SEI CERT C references, which ground
+  Ultra's patch and are shown to the user (`segsense/references.py`).
 - Following the hackathon guidance, Ultra handles the hard reasoning and Nano handles the fast
   call, which keeps each fix fast and cheap.
 

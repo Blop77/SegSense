@@ -48,12 +48,13 @@ clean. The model's claim alone is not enough.
              │ 2. run     capture ASan / UBSan / LeakSanitizer report       │
              │ 3. parse   bug kind, faulting line, alloc/free stacks        │
              │ 4. triage  Nemotron Nano: fast root-cause hint     (1 call)  │
-             │ 5. patch   Nemotron Ultra: full corrected file + reasoning   │
-             │ 6. verify  rebuild + rerun; failures fed back to step 5      │
+             │ 5. search  Tavily: CWE + CERT C guidance, trusted sites only │
+             │ 6. patch   Nemotron Ultra: full corrected file + reasoning   │
+             │ 7. verify  rebuild + rerun; failures fed back to step 6      │
              └──────────────────────────── loop until clean ───────────────┘
                                          │
                                          ▼
-                         unified diff + root-cause explanation
+               unified diff + root-cause explanation + reference links
 ```
 
 - **Two NVIDIA models, each sized for its job.** A small, fast Nemotron triages the report in about
@@ -61,6 +62,11 @@ clean. The model's claim alone is not enough.
   for serious reasoning, Nano for fast everyday calls.
 - **Grounded prompts.** The model gets line-numbered source, the trimmed sanitizer report (the
   shadow-byte dump is removed) and the stack frames that point into the user's file.
+- **Backed by real references.** SegSense maps each bug to its MITRE CWE weakness (for example
+  CWE-416, Use After Free) and asks the **Tavily** search API for guidance from trusted sources only
+  (MITRE CWE, the SEI CERT C standard, OWASP, Clang docs). The excerpts go into Nemotron Ultra's prompt
+  as background, and the links are shown next to the patch so you can learn why the fix is right.
+  This step is optional: without a `TAVILY_API_KEY`, or if Tavily is unreachable, SegSense still fixes the bug.
 - **Self-correcting.** When a patch doesn't compile, or still crashes, the compiler error or new
   report goes back to the model together with its earlier attempt.
 - **No cheating.** The prompt forbids deleting the failing code. `--expect-stdout` also rejects any
@@ -92,6 +98,7 @@ Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 | **NVIDIA Nemotron 3 Nano** (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`), the triage model: fast crash summary | `segsense/agent.py`, `SegSense._triage` |
 | **Nebius Token Factory**: OpenAI-compatible inference for both models | `segsense/llm.py` |
 | **Nebius Serverless Endpoints**: target for hosting the web demo from the `Dockerfile` (not yet deployed) | see *Deploy* |
+| **Tavily search API**: finds CWE and SEI CERT C guidance for each bug, fed to Nemotron Ultra and shown to the user | `segsense/references.py` |
 
 Both models are NVIDIA open models served by Nebius Token Factory. Every AI call in SegSense goes to
 one of them, and the CLI warns if you configure a model that isn't from NVIDIA.
@@ -121,10 +128,12 @@ git clone https://github.com/Blop77/SegSense.git
 cd SegSense
 pip install -e .
 export NEBIUS_API_KEY=...
+export TAVILY_API_KEY=...
 segsense models
 ```
 
-Get the key from https://tokenfactory.nebius.com. `segsense models` lists the NVIDIA models your key
+Get the Nebius key from https://tokenfactory.nebius.com. The Tavily key (from https://app.tavily.com)
+is optional and turns on the reference search. `segsense models` lists the NVIDIA models your key
 can use. You can also skip installing and run `python3 -m segsense ...` from the repo folder.
 
 The default model IDs live in `segsense/llm.py`. Token Factory's catalogue changes, so if
@@ -143,11 +152,12 @@ segsense fix prog.c --args "input.txt 3" --stdin in.txt
 segsense fix prog.c --expect-stdout expected.txt
 segsense fix prog.c --in-place --max-attempts 6
 segsense fix prog.c --no-triage
+segsense fix prog.c --no-references
 ```
 
 In order: fix an example (writes `examples/use_after_free.fixed.c`); run the program with arguments
 and input; require the patch to keep the output identical; overwrite the file and allow more tries;
-use only the patch model.
+use only the patch model; skip the Tavily reference search.
 
 The exit code is `0` when the program ends up clean, so SegSense works in CI.
 
@@ -197,7 +207,8 @@ python -m unittest discover -s tests -t .
 segsense/
   sanitizer.py   compile with sanitizers, run with limits, parse ASan/UBSan/LSan reports
   llm.py         Nebius Token Factory client (stdlib, retries, strips <think> blocks)
-  agent.py       the triage → patch → verify loop
+  references.py  Tavily search for CWE / SEI CERT C guidance (optional)
+  agent.py       the triage → search → patch → verify loop
   cli.py         `segsense fix | models | serve`
   web.py         streaming web demo (single page, no build step)
 examples/        buggy C programs for the demo

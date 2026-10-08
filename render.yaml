@@ -9,5 +9,7 @@ services:
     envVars:
       - key: NEBIUS_API_KEY
         sync: false          # Render asks for your Token Factory key during setup; it is never stored in the repo
+      - key: TAVILY_API_KEY
+        sync: false          # optional: turns on the Tavily reference search
       - key: SEGSENSE_EXAMPLES_ONLY
         value: "1"           # public demo: visitors can run the bundled examples, not arbitrary C
