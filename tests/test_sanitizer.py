@@ -1,9 +1,9 @@
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from segsense.sanitizer import LEAK_CHECKS, compile_source, find_compiler, parse_report, run_binary
+from segsense import sanitizer
+from segsense.sanitizer import compile_source, find_compiler, parse_report, run_binary
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
@@ -33,8 +33,8 @@ class SanitizerTests(unittest.TestCase):
 
     def test_examples_are_caught_at_the_right_line(self):
         for name, (kind, func, line) in EXPECTED.items():
-            if name == "memory_leak.c" and not LEAK_CHECKS:
-                continue  # LeakSanitizer is Linux-only
+            if name == "memory_leak.c" and not sanitizer.LEAK_CHECKS:
+                continue  # LeakSanitizer is unavailable here (macOS, or a container without ptrace)
             with self.subTest(name):
                 result = self._run(EXAMPLES / name)
                 self.assertFalse(result.clean)

@@ -42,7 +42,8 @@ demo that streams each step live.
 
 ## Why we built it
 
-We are students who write C every day, and memory bugs cost us more time than anything else.
+We are students who write C every day (edit this line to describe your team), and memory bugs cost
+us more time than anything else.
 Sanitizers already know *where* memory went wrong, but their reports are hard to read, and they
 don't say *why* or how to fix it. LLMs can explain and patch code, but they can't prove their patch
 works. SegSense combines the two: the sanitizer provides the ground truth, Nemotron does the
@@ -152,10 +153,33 @@ window rather than the whole screen.
 
 ---
 
+## Requirements check
+
+Each hackathon rule, and where SegSense meets it.
+
+| Requirement | Status | Where |
+|---|---|---|
+| Runs on Nebius Token Factory or AI Cloud | ✅ | All inference goes through Token Factory (`segsense/llm.py`) |
+| Uses at least one NVIDIA open model | ✅ | Nemotron 3 Ultra and Nemotron 3 Nano |
+| Fits a track | ✅ | Coding and Agentic Engineering: the agent writes, runs and tests C code |
+| Working project | ✅ | All 8 examples fixed on real Nemotron; tests pass in CI |
+| Project description: what, why, how | ✅ | *What we built*, *Why we built it* and *How it works* above |
+| Working demo URL | ❌ **to do** | Host the Docker image, then paste the URL |
+| Demo video, public YouTube, ≤ 3 min | ❌ **to do** | Script above |
+| Public repository | ✅ | github.com/Blop77/SegSense is public |
+| Open source license shown at the top of the repo | ✅ | MIT, which GitHub detects |
+| README with setup and run instructions | ✅ | README: *Setup*, *Usage*, *Web demo*, *Deploy* |
+| README highlights NVIDIA model usage | ✅ | README: *NVIDIA and Nebius usage* |
+| README says where Token Factory accelerated the work | ✅ | README: *How Token Factory accelerated SegSense* |
+| README lists other Nebius tools used | ⚠️ | Serverless Endpoints is listed as "not yet deployed"; update it if you host there |
+| Feedback on Token Factory and NVIDIA tools | ✅ draft | *Feedback* section above: make it your team's own words |
+| Explanation if the project existed before the submission period | ✅ | *Existed before the submission period?* above |
+| City, if you attended Builders & Brews | ❓ | Your choice on the form |
+
 ## Submission checklist
 
-- [ ] Repository is **public**, and the MIT license shows at the top of the repo page
-- [ ] `main` contains the code (merge the SegSense pull request)
+- [x] Repository is **public**, and the MIT license shows at the top of the repo page
+- [x] `main` contains the code
 - [ ] Demo URL: hosted web demo (Docker image on Nebius Serverless Endpoints or another host,
       with `SEGSENSE_EXAMPLES_ONLY=1`)
 - [ ] Demo video: public YouTube link, 3 minutes or less
