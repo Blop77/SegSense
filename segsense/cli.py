@@ -41,8 +41,8 @@ def print_event(kind: str, data: dict) -> None:
     elif kind == "references_start":
         print(f"{tag} searching {data['source']} for reference guidance ...")
     elif kind == "references":
-        label = f"{data['cwe']} " if data["cwe"] else ""
-        print(f"{tag} {label}references via Tavily ({data['seconds']}s):")
+        label = " · ".join(filter(None, [data["cwe"], data["cert_rule"] and f"CERT {data['cert_rule'].split('.')[0]}"]))
+        print(f"{tag} {label + ' ' if label else ''}references via Tavily ({data['seconds']}s):")
         for item in data["items"]:
             print(f"        {item['title']}\n          {_c('36', item['url'])}")
     elif kind == "patch_start":

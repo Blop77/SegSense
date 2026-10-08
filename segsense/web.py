@@ -217,7 +217,7 @@ function render(ev) {
     case 'triage_start': line(`<span class="ai">${esc(ev.model)} triaging...</span>`); break;
     case 'triage': line(`<span class="ai">triage (${ev.seconds}s):</span> ${esc(ev.text)}`); break;
     case 'references_start': line(`<span class="ref">searching ${esc(ev.source)} for reference guidance...</span>`); break;
-    case 'references': line(`<span class="ref">${ev.cwe ? esc(ev.cwe) + ' ' : ''}references via Tavily (${ev.seconds}s):</span>` +
+    case 'references': line(`<span class="ref">${[ev.cwe, ev.cert_rule && 'CERT ' + ev.cert_rule.split('.')[0]].filter(Boolean).map(esc).join(' · ')} references via Tavily (${ev.seconds}s):</span>` +
                        ev.items.map(r => `\n    <a href="${encodeURI(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title || r.url)}</a>`).join('')); break;
     case 'patch_start': line(t + `<span class="ai">${esc(ev.model)} writing a patch...</span>`); break;
     case 'patch': line(t + `<span class="ai">patch in ${ev.seconds}s</span>` +

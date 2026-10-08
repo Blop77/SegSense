@@ -45,6 +45,7 @@ class FakeReferences:
         return Lookup(
             query="CWE-122 Heap-based Buffer Overflow in C",
             cwe="CWE-122",
+            cert_rule="ARR30-C. Do not form or use out-of-bounds pointers or array subscripts",
             references=[Reference("CWE-122: Heap-based Buffer Overflow", "https://cwe.mitre.org/data/definitions/122.html",
                                   "Allocate enough space for the terminating null character.")],
         )
@@ -126,7 +127,7 @@ class AgentTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(refs.reports[0].kind, "heap-buffer-overflow")
         prompt = model.calls[1][1][1]["content"]
-        self.assertIn("Reference guidance for CWE-122", prompt)
+        self.assertIn("This is CWE-122; the SEI CERT C rule that prevents it is ARR30-C", prompt)
         self.assertIn("terminating null character", prompt)
         shown = dict(events)["references"]
         self.assertEqual(shown["items"][0]["url"], "https://cwe.mitre.org/data/definitions/122.html")
