@@ -75,6 +75,11 @@ Factory: heap overflow, stack overflow (off-by-one), use-after-free, use-after-f
 `realloc`, double free, memory leak, signed integer overflow, and a wrong-stride matrix transpose.
 Each fix took two Nemotron calls, about 4–5k tokens, and 3–7 seconds end to end.
 
+On a real bug, cJSON v1.7.10's `cJSON_Minify` (CVE-2019-11834 and CVE-2019-11835), SegSense needed two
+attempts: re-running Ultra's first patch under AddressSanitizer exposed a third out-of-bounds read, and
+the second patch ran clean. On 116 edge-case inputs the patch had no memory errors and no hangs, while
+the maintainers' own first fix (1.7.11) hangs on 7 of them. See `case_studies/cjson_minify/`.
+
 ## How we used NVIDIA and Nebius
 
 - **NVIDIA Nemotron 3 Ultra** (`nvidia/Nemotron-3-Ultra-550b-a55b`): root-cause reasoning and code repair.

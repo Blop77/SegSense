@@ -75,7 +75,7 @@ clean. The model's claim alone is not enough.
 
 ## Results on real Nemotron
 
-All six bundled examples, run against Nebius Token Factory with Nemotron 3 Nano (triage) and
+All eight bundled examples, run against Nebius Token Factory with Nemotron 3 Nano (triage) and
 Nemotron 3 Ultra (patch). Each was fixed on the first attempt and verified clean by the sanitizers.
 Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 
@@ -89,6 +89,28 @@ Each fix takes two Nemotron calls and about 4,000 to 5,000 tokens.
 | `signed_overflow.c` | signed integer overflow (UB) | widens `int` to `long long` and fixes `printf` | 6 s |
 | `string_builder.c` | heap-use-after-free across `realloc` | computes the write pointer after `realloc` moves the buffer | 7 s |
 | `matrix_transpose.c` | heap-buffer-overflow (wrong stride) | `t[c * cols + r]` → `t[c * rows + r]`; output checked with `--expect-stdout` | 6 s |
+
+### Real-world bug: cJSON CVE-2019-11834 / CVE-2019-11835
+
+We also ran SegSense on `cJSON_Minify` from [cJSON](https://github.com/DaveGamble/cJSON) v1.7.10, a
+widely used C JSON library, which had two published out-of-bounds bugs
+([`examples/real_world_cjson_minify.c`](examples/real_world_cjson_minify.c)). Nemotron 3 Ultra's
+first patch fixed both CVEs, but re-running it under AddressSanitizer found a third read past the end
+of the buffer. With that report, the second patch ran clean and matched the maintainers' output:
+3 Nemotron calls, 22,130 tokens, 48 s of model time.
+
+We then compared the patch with cJSON's own fixes on 116 edge-case inputs, under ASan and UBSan:
+
+| Version | Memory errors | Hangs | Same output as 1.7.12 |
+|---|---|---|---|
+| SegSense patch (on 1.7.10) | 0 | 0 | 109 / 116 |
+| cJSON 1.7.11 (CVE fix) | 0 | 7 | 109 / 116 |
+| cJSON 1.7.12 | 0 | 0 | 116 / 116 |
+
+The maintainers' first fix, 1.7.11, loops forever on 7 inputs; cJSON fixed that in 1.7.12 as a
+potential denial of service. The 7 output differences are all a stray `/` in invalid JSON, which the
+SegSense patch keeps, as v1.7.10 did. The full write-up, run log and comparison script are in
+[`case_studies/cjson_minify/`](case_studies/cjson_minify/README.md).
 
 ## NVIDIA and Nebius usage
 
@@ -308,7 +330,8 @@ segsense/
   agent.py       the triage → search → patch → verify loop
   cli.py         `segsense fix | models | serve`
   web.py         streaming web demo (single page, no build step)
-examples/        buggy C programs for the demo
+examples/        buggy C programs for the demo, plus one real-world CVE (cJSON)
+case_studies/    the cJSON CVE run, its log, and a comparison with the upstream fixes
 tests/           unit and end-to-end tests
 ```
 

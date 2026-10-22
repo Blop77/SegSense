@@ -16,6 +16,7 @@ EXPECTED = {
     "signed_overflow.c": ("signed integer overflow", "factorial", 7),
     "string_builder.c": ("heap-use-after-free", "sb_append", 27),
     "matrix_transpose.c": ("heap-buffer-overflow", "transpose", 9),
+    "real_world_cjson_minify.c": ("heap-buffer-overflow", "cJSON_Minify", 42),
 }
 
 

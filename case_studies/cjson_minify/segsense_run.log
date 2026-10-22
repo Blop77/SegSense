@@ -1,0 +1,71 @@
+[segsense] real_world_cjson_minify.c | compiler clang | patch model nvidia/Nemotron-3-Ultra-550b-a55b
+[orig] compiling with -fsanitize=address,undefined
+[orig] AddressSanitizer: heap-buffer-overflow  cJSON_Minify at real_world_cjson_minify.c:42
+        cJSON_Minify at real_world_cjson_minify.c:42
+        run at real_world_cjson_minify.c:108
+        main at real_world_cjson_minify.c:117
+        run at real_world_cjson_minify.c:106
+[segsense] searching Tavily for reference guidance ...
+[segsense] triaging with nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B ...
+[segsense] CWE-122 · CERT ARR30-C references via Tavily (2.3s):
+        CWE - CWE-122: Heap-based Buffer Overflow (4.20)
+          https://cwe.mitre.org/data/definitions/122.html
+[segsense] triage (14.8s): It is a heap‑buffer read overflow. The overflow occurs at line 42 when the parser reads *json after an unterminated comment moves the pointer past the allocated buffer. This happens because the comment‑skipping loop does not stop at the buffer’s end, so json ends up pointing past the allocated memory and the next iteration reads beyond it.
+[try 1] asking nvidia/Nemotron-3-Ultra-550b-a55b for a patch ...
+[try 1] patch received in 14.5s (7729 tokens)
+        root cause: The function cJSON_Minify reads past the end of the input buffer in two cases: (1) when a multiline comment is unterminated, the loop exits at the null terminator but then `json += 2` advances two bytes past it; (2) when a string literal is unterminated, the loop exits at the null terminator but the code unconditionally copies that null terminator and increments `json` one byte past it. Both cause the outer `while (*json)` loop to read out of bounds.
+[try 1] compiling with -fsanitize=address,undefined
+[try 1] AddressSanitizer: heap-buffer-overflow  cJSON_Minify at real_world_cjson_minify.c:84
+        cJSON_Minify at real_world_cjson_minify.c:84
+        run at real_world_cjson_minify.c:112
+        main at real_world_cjson_minify.c:122
+        run at real_world_cjson_minify.c:110
+[try 2] asking nvidia/Nemotron-3-Ultra-550b-a55b for a patch ...
+[try 2] patch received in 18.6s (10764 tokens)
+        root cause: The string literal parsing loop reads one byte past the allocated buffer when the string ends with a backslash followed by the null terminator, because it unconditionally copies the character after a backslash without checking for the null terminator.
+[try 2] compiling with -fsanitize=address,undefined
+[try 2] clean run (exit 0)
+
+Fixed after 2 attempt(s).
+
+[segsense] 3 Nemotron call(s) on Token Factory · 22,130 tokens · 47.9s model time
+--- original.c
++++ fixed.c
+@@ -73,7 +73,9 @@
+             {
+                 json++;
+             }
+-            json += 2;
++            if (*json) {
++                json += 2;
++            }
+         }
+         else if (*json == '\"')
+         {
+@@ -84,10 +86,20 @@
+                 if (*json == '\\')
+                 {
+                     *into++ = (unsigned char)*json++;
++                    if (*json) {
++                        *into++ = (unsigned char)*json++;
++                    } else {
++                        break;
++                    }
+                 }
++                else
++                {
++                    *into++ = (unsigned char)*json++;
++                }
++            }
++            if (*json == '\"') {
+                 *into++ = (unsigned char)*json++;
+             }
+-            *into++ = (unsigned char)*json++;
+         }
+         else
+         {
+
+Root cause: The string literal parsing loop reads one byte past the allocated buffer when the string ends with a backslash followed by the null terminator, because it unconditionally copies the character after a backslash without checking for the null terminator.
+Fix: In the string parsing loop, after copying a backslash, check if the next character is the null terminator; if so, break out of the loop instead of copying it. Also restructure the loop to avoid the unconditional second copy.
+
+Wrote /home/user/SegSense/case_studies/cjson_minify/segsense_fixed.c
