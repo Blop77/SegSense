@@ -1,0 +1,4 @@
+valid: [{"name":"cJSON","tags":[1,2]}]
+escapes: [{"path":"C:\\tmp","quote":"say \"hi\""}]
+unterminated comment: [{"a":1}]
+unterminated string: [{"a":"oops\]
